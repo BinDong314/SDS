@@ -1,0 +1,7 @@
+AUTOMAKE_OPTIONS = gnu
+SDS_SERVER=
+if HAVE_SERVER
+SDS_SERVER+=test
+endif
+SUBDIRS=src doc man $(SDS_SERVER)
+

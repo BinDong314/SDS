@@ -1,0 +1,62 @@
+
+//This file defines the scheme for Berkeley DB to store the metadata 
+//  Author: Bin Dong <dbin at lbl.gov >
+//  Copyright 2015 the Regents of the University of California
+
+// The scheme is in the shape of (key, value)
+// The key is similar to SDS_Object (in ../client/sds_object.h) and the value has
+// -- SDS files:  reorganzed file and index file.
+// -- Status: the status of the SDS files (1 to 1 )
+// -- Read Counter: to identify most-recently-accessed files
+// -- other owership bitmap etc. (not used right now)
+ 
+
+message query_db_key
+{
+	required string  filename  = 1;
+	required string  group     = 2;	
+	required string  dsetname  = 3;	
+	required int32   datatype  = 4;
+	required int32   filetype  = 5;
+}
+
+message sds_file{	
+	required string filename            =1;
+	required string group               =2;
+	required string dsetname            =3;
+	required int32  filetype            =4;
+	required int32  datatype            =5;
+	required int32  ir_type             =6; //Sub type for index and reorganized files
+	optional int32  cores               =7;
+	optional string parameters          =8;
+	optional int32  create_time         =9;
+	optional int32  io_pattern_type     =10;
+}	
+
+enum    sds_file_status{
+        UNDER_SERVICE            = 0;
+	UNDER_BUILDING           = 1;
+}
+
+message read_count{
+	required int32     interval_count           = 1;
+	required int32     previous_interval        = 2;
+	required int32     previous_400_interval    = 3;
+	required int32     previous_10000_interval  = 4;
+	required int32     life_time                = 5;
+}
+
+message SDS_metadata_db_value
+{
+	repeated sds_file_status      index_file_status             = 1;
+	repeated sds_file             index_files                   = 2; 	
+	repeated sds_file_status      reorg_file_status             = 3;
+	repeated sds_file             reorg_files                   = 4; 	
+	required read_count           read_count                    = 5;
+	required int32                owner_id                      = 6;
+	required int32                group_id                      = 7;
+	required int32                owner_bit                     = 8;
+	required int32                group_bit                     = 9;
+	required int32                other_bit                     = 10;
+}
+

@@ -1,0 +1,94 @@
+/**
+ * *** Copyright Notice ***
+ * SDS - Scientific Data Services framework, Copyright (c) 2015, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy).  All rights reserved.
+ * If you have questions about your rights to use or distribute this software, 
+ * please contact Berkeley Lab's Technology Transfer Department at TTD@lbl.gov.
+ * 
+ * NOTICE.  This software was developed under funding from the 
+ * U.S. Department of Energy.  As such, the U.S. Government has been granted 
+ * for itself and others acting on its behalf a paid-up, nonexclusive, 
+ * irrevocable, worldwide license in the Software to reproduce, prepare 
+ * derivative works, and perform publicly and display publicly.  
+ * Beginning five (5) years after the date permission to assert copyright is 
+ * obtained from the U.S. Department of Energy, and subject to any subsequent 
+ * five (5) year renewals, the U.S. Government is granted for itself and others
+ * acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license
+ * in the Software to reproduce, prepare derivative works, distribute copies to
+ * the public, perform publicly and display publicly, and to permit others to
+ * do so.
+ *
+*/
+
+/**
+ *
+ * Email questions to {dbin, sbyna, kwu}@lbl.gov
+ * Scientific Data Management Research Group
+ * Lawrence Berkeley National Laboratory
+ *
+*/
+#ifndef __SDS_JOB_H__
+#define __SDS_JOB_H__
+
+#include "sds-common.h"
+
+typedef enum job_type{
+  BUILD_INDEX               = 0,
+  REORGANIZE_DATA           = 1,
+  RUN_ANALYZE               = 2,
+}job_type;
+
+
+typedef enum sds_job_status{
+  SUBMITTED               = 0,
+  WAIT                    = 1,
+  RUNNING                 = 2,
+  FINISHIED_WITHOUT_ERROR = 3,
+  FINISHIED_WITH_ERROR    = 4
+}sds_job_status;
+
+typedef struct job_file_info{
+  char                       *file_name;
+  char                       *group_name;
+  char                       *dataset_name;
+  SDS_Data_type               data_type;   //Type of the data to handle
+  SDS_File_type               file_type;   //Type of the file containing the variable
+}job_file_info;
+
+typedef struct sds_job {
+  struct sds_job                  *prev;
+  struct sds_job                  *next;
+  job_file_info                    original_file_info;
+  job_file_info                    new_file_info;
+  job_type                         job_type;     //Three types: 
+                                                 // build index, reorganize data, 
+                                                 // run an analysis program 
+  int                              job_subtype;  // Sub type for each job_type
+  char                            *job_id;
+  int                              number_of_cores;
+  int                              time_secs;
+  char                             other_parameters[MAX_FILE_NAME_LENGTH];
+  enum sds_job_status              status;
+}sds_job;
+
+typedef struct sds_job_list{
+  struct sds_job       *jobs;
+  int                   job_count;
+}sds_job_list;
+
+
+void  initialize_sds_job_list(sds_job_list *job_queue);
+void  add_to_sds_job_list(sds_job_list *job_list, sds_job *job);
+int   start_job(sds_job *job);
+enum  sds_job_status check_job_status(sds_job *job);
+
+void  get_job_reorganizer_file_name(char *file_name, sds_job *job);
+void  get_job_input_file_name(char *file_name,        sds_job *job);
+void  get_job_output_file_name(char *file_name,       sds_job *job);
+void  get_job_script_file_name(char *file_name,       sds_job *job);
+void  get_job_attribute_file_name(char *file_name,    sds_job *job);
+void  get_job_group_name(char *dataset,                sds_job  *job);
+void  get_job_dataset_name(char *group,                sds_job  *job);
+int   estimate_core_requirement(char *input_file, char *output_file);
+void  estimate_wall_time(char *wall_time);
+void  convert_wall_time(char * wall_time, int time_secs);
+#endif

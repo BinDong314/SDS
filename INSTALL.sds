@@ -1,0 +1,240 @@
+This directory contains the current version of the SDS (Scientific Data Services) Framework.  
+Please report any problem you've encountered in using this package to anyone of the following.
+Bin Dong: dbin@lbl.gov
+Suren Byna: SByna@lbl.gov
+John Wu: KWu@lbl.gov
+
+0, Server nodes on Edison and Cori (test purpose !)
+   On Cori,   using "10.141.1.21     	cori21"
+   On Edison, using "128.55.145.33   edimom05	nid00896" 
+
+1, Required software packages:
+   Note: 1) If you are group member of m1248 on Edison at NERSC, all following packages 
+            are installed under /project/projectdirs/m1248/sds-depends-packages/install
+         2) On Hopper/Edison, configure following packages as "NOT Shared" by 
+            adding "--enable-shared=no"
+         3) If you use cc on Hopper/Edison, there is no need to install MPICH2 
+            as cc already has MPI support. 
+
+   -- HDF5 standard verion or (HDF5 version with VOL feature) 
+      Mostly you need HDF5 standard version (https://www.hdfgroup.org/HDF5/).
+      HDF5 version with VOL feature provides access to SDS through standard HDF5 interface.
+      (Notes about VOL version:  
+             1, HDF5 VOL version   svn co --revision 25561 http://svn.hdfgroup.uiuc.edu/hdf5/features/vol1
+             2, Current SDS will stay with revision 25561 of HDF5 until new VOL merges into main trunk.)
+
+   -- Protobuf (2.5.0) and Protobuf-c (1.0.2)
+      https://code.google.com/p/protobuf/
+      and https://code.google.com/p/protobuf-c/       
+	-> Installing protobuf
+		$ <PROTOBUF_SRC_DIR>/configure --prefix=<PROTOBUF_INSTALL_DIR>
+		$ make
+		$ make install
+	-> Installing protobuf-c
+		$ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:<PROTOBUF_INSTALL_DIR>:<PROTOBUF_INSTALL_DIR/lib>
+		$ <PROTOBUF_C_SRC_DIR>/configure --prefix=<PROTOBUF_C_INSTALL_DIR>
+		$ make && make install
+   -- libevent-2.0.21
+      http://libevent.org/
+   -- Berkeley DB 
+      Note:  using"env CC=gcc or cc ../dist/configure --prefix= ..."
+   -- Bison 3.0 
+      http://ftp.gnu.org/gnu/bison/bison-3.0.tar.gz
+   -- automake 1.15 
+      http://ftp.gnu.org/gnu/automake/automake-1.15.tar.gz 
+   -- MPICH2 (add mpicc/mpirun to your PATH)
+      http://www.mpich.org/
+
+2, A quick steps to install it on MacBook or single *nix machines 
+   (If you want to install it on Edison, skip this section)
+   Step 1: compile sds code
+   -- cd sds-0.0.1-source-code-dir
+   -- vim run-config-server.c
+      (change each item in runconf-server.sh for your environment)
+   -- ./rum-config-server.c
+   -- make & make install 
+  Step 2: start SDS server
+   -- cd sds-0.0.1-install-dir/bin
+   -- cp sds-0.0.1-source-code-dir/sds.conf ./
+   -- mkdir sds-root-dir
+   -- vim sds.conf and modify following items
+       sds_root_path =  "full path to /sds-install-dir/bin/sds-root-dir"
+       cluster_version="no"
+       server_ip="128.0.0.1"
+   -- ./server -c (create database)
+   -- ./server       
+  Step 3: run a simple test 
+    -- cd sds-0.0.1-install-dir/bin
+       //create two test files
+    --  mpirun -n 1 ./fake-hdf5 -f testf1.h5p -g /testg -d /testg/testd -n 1 -s 100 -t 0
+    --  mpirun -n 1 ./fake-hdf5 -f testf2.h5p -g /testg -d /testg/testd -n 1 -s 100 -t 0
+       //run the query query tesf1.h5p and testf2.h5p with dataset testd > 97 
+    --  mpirun -n 1 ./sds-pquery-test
+       //check the results
+    --  h5dump testf3.h5p 
+
+
+3,  Overview of SDS Compilation and Installation on Edison
+   SDS has two major components, SDS Client and SDS Server. These two components are compiled 
+   separately as they have different underlying package dependences. SDS client needs to be compiled 
+   with default configurations. SDS Server needs to be compiled with "--enable-server". The general steps 
+   to compile SDS are:
+     --Step 1:  Compile and install SDS Client 
+     --Step 2:  Compile and install HDF5 with/without the SDS patch from (Explained in the next paragraph)
+     --Step 3:  Compile and install SDS Server
+ 
+4, Modes of using SDS
+   The services provided by SDS can be accessed by users through either HDF5 VOL internal plugin
+   or HDF5 VOL external plugin. 
+     -- Accessing SDS through HDF5 VOL "Internal" plugin requires no
+        modification of users' existing codes. But, the HDF5 library needs to be patched with SDS 
+        internal plugin. Then users' code need to be recompiled with the new HDF5 library. 
+     -- Using HDF5 VOL "External" plugin to access SDS needs user has to add a few lines of code
+        to register the plugin dynamically. In this usage case, HDF5 library does NOT need
+        to be recompiled. 
+   User must choose one of these methods to compile at one time separately.We highly recommond user 
+   to use internal plugin. However, if users want to use both external and internal VOL plugin at 
+   same time, you only need to compile HDF5 once based on instructions of "HDF5 VOL internal plugin" 
+   at first, then modify your code to register HDF5 VOL external plugin and compile the code as 
+   the instructions for "HDF5 VOL external plugin".  
+
+5, Downloading SDS Source Code
+   The source code of SDS 0.0.0 can be downloaded from codeforge.lbl.gov with proper permission. 
+   Development version can be obtained using  
+
+   --  $ svn co --username developername https://codeforge.lbl.gov/svn/sds/sds-0.0/
+
+   In following steps we assume that SDS files are under directory SDS_SOURCE_DIR.
+
+
+6, SDS Client Compilation and Installation
+   --  $ cd SDS_SOURCE_DIR
+   --  $ ./configure --prefix=SDS_CLIENT_INSTALL_DIR
+                     --with-protobuf=PROTOBUF_INSTALL_DIR 
+                     --with-protobufc=PROTOBUFC_INSTALL_DIR 
+       Note: On Edison, an example configure script is provided  as ./runconf.sh, 
+             but edit runconf.sh for change "prefix" to the directory you would install SDS
+   --  $ make
+   --  $ make install
+
+   
+7, HDF5 with VOL Feature Compilation and Installation
+   Depending on the mode of SDS' HDF5 VOL plugin you want to use, go to Step (1) or Step (2). 
+   If you want to use both plugins, try Step (1) and skip Step (2). 
+
+   (1) HDF5 internal plugin  
+   Note: If you plan to only use HDF5 external plugin to access SDS, you can skip this step and go to 
+   next step "(2) HDF5 external plugin"
+
+   -- $svn co --revision 25561 http://svn.hdfgroup.uiuc.edu/hdf5/features/vol
+   -- $cd VOL_SOURCE_DIR  ## Assume HDF5 code is located at VOL_SOURCE_DIR
+   -- $patch -p0 < SDS_SOURCE_DIR/src/client/hdf5-sds.patch
+   -- $./configure --with-sds=SDS_CLIENT_INSTALL_DIR 
+                   --prefix=HDF5_VOL_INSTALL_DIR 
+                   --with-protobuf-c=PROTOBUF_INSTALL_DIR
+       (On edison, if you are a m1248 group member, you can use 
+        /project/projectdirs/m1248/sds-depends-packages/install/protobuf-c)
+   -- make 
+   -- make install 
+
+   (2) HDF5 external plugin 
+
+   -- $svn co --revision 25561 http://svn.hdfgroup.uiuc.edu/hdf5/features/vol 
+   -- $cd VOL_SOURCE_DIR  ## Assume HDF5 code is located at VOL_SOURCE_DIR
+   -- $./configure --with-sds=SDS_INSTALL_DIR --prefix=HDF5_VOL_INSTALL_DIR
+   -- make 
+   -- make install 
+
+8, SDS Server Compilation and Installation
+   --  $ cd SDS_SOURCE_DIR
+   --  $ ./configure --enable-server
+                     --prefix=SDS_SERVER_INSTALL_DIR
+                     --with-libevent=LIBEVENT_INSTALL_DIR 
+                     --with-protobuf=PROTOBUF_INSTALL_DIR 
+                     --with-protobufc=PROTOBUFC_INSTALL_DIR 
+                     --with-db=BERKELEY_DB_INSTALL_DIR  
+                     --with-mpi=MPICH_INSTALL_DIR 
+                     --with-hdf5=HDF5_INSTALL_DIR 
+       Note: On Edison, an configure example is provided with ./runconf-server.sh, 
+             but edit runconf-server.sh for change "prefix" to the directory you will install SDS
+   --  $ make
+   --  $ make install
+
+9, Start SDS Server
+      SDS Server is designed to run on a dedicated node. 
+      At NERSC, we suggest to use MOM node of batch system, where reorganization job can be formulated,
+      submitted and monitored. In the following example, we will start SDS Server runs on Edison edimom14 
+      node (ip: 128.55.44.224). At this point we assume that you had logged onto Edison. 
+
+   --  $ ssh edimom14 
+   --  $ cd  SDS_SERVER_INSTALL_DIR/bin
+   --  $ ./server -s  path-to-sds-root-dir/SDS-ROOT-DIR/    
+
+   The -s option of server is used to specify the location to store reorganized files, such as sorted
+   files, transposed files, and bitmap index files. 
+   Note that, "SDS-ROOT-DIR" must be the tail the directory. In other words, SDS-ROOT-DIR must be used 
+   as the name of the directory.  This is needed because SDS will intercept file read operations inside HDF5.
+   Once SDS-ROOT-DIR is found, SDS will regard it as reorganized file and therefore skips communication 
+   with SDS Server.  
+
+10, Using HDF5 VOL internal plugin to access SDS Reorganized File
+   At this step, we assume that you have installed HDF5 with SDS path properly at HDF5_INSTALL_DIR. 
+   Otherwise, go to "Step 6 (1) HDF5 internal plugin" to install the required HDF5. 
+
+   An example is provided in test/read-interface-test-internal-plugin.c to test SDS.
+   SDS package also provides a few tools
+   to evaluate the correctness of installation. There are following three steps to do. 
+   1) Generate test data. 
+   2) Perform a data reorganization.  
+   3) Read the reorganized file. 
+
+   Here is an example to generate a test HDF5 dataset, to reorganize data, and then to read the data
+   using the SDS framework. 
+
+   --  $ cd SDS_SOURCE_DIR/test
+   --  $ HDF5_INSTALL_DIR/bin/h5cc read-interface-test-internal-plugin.c -o read-test-internal
+   --  $ aprun -n 24 ./fake-hdf5 -f ./testf.h5 -g /testg -d /testg/testd -n 3 -s 100,100,1000 -t 0  
+   --  $ ./reorganize  -f testf.h5  -g /testg -d testd -n 24 -s 128.55.44.227 -o t -t "00:02:00"
+   --  $ aprun -n 1 ./read-test-internal  -f YOUR_DATA_DIRECTORY/testf.h5 -d /testg/testd -q :,:,1:10
+   
+   Note: if some error about "loading shared libraries ..", please setup "export LD_LIBRARY_PATH = $LD_LIBRARY_PATH: missed library "
+
+
+   In the second command, fake-hdf5 is a tool to generate a test HDF5 data set (-d /testg/testd) under 
+   file(-f /testf.h5) to test. The dimension of the dataset is three (-n 3) and the size for each dimension
+   is 100, 100, and 1000 separately. The type for the element of the dataset is unsigned int (-t 0).  
+
+   In the third command, reorganize will start a transpose reorganization (-t t) on dataset /testg/testd 
+   within the file /scratch3/scratchdirs/dbin/testf.h5. The number of cores to perform this reorganization 
+   is 24 (-n 24) and the walltime for job is 2 minutes (-t "00:02:00"). The "-s 128.55.44.227" is to specify 
+   the IP address of SDS Server, where job script is created and submitted.  "-r r" is to specify the request 
+   type sent to server. In this example, r means reorganization request. 
+
+   In the fourth command, the dataset /testg/testd within file /scratch3/scratchdirs/dbin/testf.h5 will be read.
+   The request is "-q :,:,1:1000", where the whole  of first and second dimension and partial of third dimension
+   (between 1:1000) will be read.    
+
+
+11, Using HDF5 VOL external plugin to access SDS reorganized file
+   At this step, we assume that you have installed HDF5 properly at HDF5_INSTALL_DIR. 
+   Otherwise, go to previous "Step 6 (2) HDF5 external plugin" to install required HDF5.
+ 
+   SDS client library is required to compile external plugin. SDS external plugin is 
+   src/client/sds-external-vol.c. An example of code of using the is test/read-interface-test-external-plugin.c. 
+   The compilation sample file is test/compile-external.sh.
+
+   --  $ cd SDS_SOURCE_DIR/test
+   --  $ ./compile-external.sh  ## Edit the path inside to specify your own package path
+   --  $ aprun -n 24 ./fake-hdf5 -f YOUR_DATA_DIRECTORY/testf.h5 -g /testg -d /testg/testd -n 3 -s 100,100,1000 -t 0  
+   --  $ ./reorganize  -f YOUR_DATA_DIRECTORY/testf.h5  -g /testg -d testd -n 24 -o t -t "00:02:00"
+   --  $ aprun -n 1 ./read-test-external  -f YOUR_DATA_DIRECTORY/testf.h5 -d /testg/testd -q :,:,1:10
+   Tools, fake-hdf5 and reorganize, are used to generate test data, as described above.
+
+   
+12, Other tips
+
+  1) Change the IP address for SDS Server in sds-0.1/client/server-connector.h, and recompile the code.
+     Defaults values are:
+     #define SERVER_IP   "10.128.16.155" (This mom7's IP address)
+     #define SERVER_PORT "50001"
+

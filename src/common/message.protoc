@@ -1,0 +1,207 @@
+//This file define the communication struct between client and server
+
+//Type of communication 
+// QUERY: ask metadata from server
+// REORG: start a reorganization 
+// ADMIN: other admin work
+// ANALY: start a analysis job on server (for single node analysis)
+// TRACE: pattern information of trace log
+enum message_type{
+	QUERY    = 1;
+     	REORG    = 2;
+     	ADMIN    = 3;
+	ANALY    = 4;
+        TRACE    = 5;
+}
+
+
+//Return status of query
+enum query_status{
+       SUCCESSFUL  = 1;
+       FAILED      = 2;
+}	
+
+//For reorganization
+enum reorg_status{
+	ACCEPTED             = 1;
+     	SUBMITTED            = 2;
+	RUNNING              = 3;
+	FINISH_WITHOUT_ERROR = 4;
+	FINISH_WITH_ERROR    = 5;
+}	
+
+//sds object (based on SDS_Object in client/sds-object.h) for communication
+message sds_object{
+	required string       filename                   = 1;
+	optional string       group                      = 2;
+	optional string       dsetname                   = 3;
+	optional int32        file_type                  = 4;
+	optional int32        data_type                  = 5; 
+}
+
+
+//
+// Start the difinaiton for a rquest to server 
+//
+//
+
+//To the query tree (defined in ../client/sds-query-tree.h)
+message query_tree_node{
+	required int32        type               = 1;
+	optional int32        operator           = 2; 	 
+	optional string       operand            = 3;
+	repeated sds_object   collection         = 4;  //A group of objects
+}
+
+//Define operation for the following condition tree (defined in ../client/sds-condition-tree.h)
+message operation_m{
+	repeated int32 op_type    =1;
+	required int32 op_n       =2;
+	repeated float op_operand =3;
+}
+
+//For the condition tree (defined in ../client/sds-condition-tree.h)
+message cond_tree_node{
+	required int32        type               = 1;
+	optional int32        object_index       = 2; 	 
+	optional operation_m  operation          = 3;
+}
+
+//Condition tree (defined in ../client/sds-condition-tree.h)
+message cond_tree{
+	repeated cond_tree_node nodes             = 1;
+}
+
+//Parameters of SDS_Collection_project (defined in ../client/sds-collection.c)
+message project_index{
+	repeated int32        selected_obj_indexs = 1;
+}
+
+//Parameters of SDS_Collection_join (defined in ../client/sds-collection.c)
+message join_index{
+	required int32        key_obj_index1 = 1;
+	required int32        key_obj_index2 = 2;
+}
+
+
+message request_query_data{
+	repeated query_tree_node    query_tree           = 1;
+	repeated sds_object         objects              = 2;
+}
+
+message request_analy_data{
+	repeated query_tree_node    query_tree                 = 1;
+}
+ 
+message request_reorg_data{
+	repeated sds_object   objects                    = 1;
+	repeated int32        index_type                 = 2;
+	repeated int32        reorg_type                 = 3;
+	repeated int32        index_cores                = 4;
+	repeated int32        reorg_cores                = 5;
+	repeated int32        index_time_secs            = 6;
+	repeated int32        reorg_time_secs            = 7;
+        repeated string       index_parameters           = 8;
+        repeated string       reorg_parameters           = 9;
+}
+
+message request_admin_data{
+	optional sds_object   object                     = 1;
+	optional int32        command                    = 2;
+}
+message hdf5_hyperslab{
+	repeated uint64   start  = 1;     
+	repeated uint64   stride = 2;
+	repeated uint64   count  = 3;
+	repeated uint64   block  = 4;
+}
+
+message hdf5_eselection{
+	repeated uint64   coordination = 1;
+}
+	
+message request_trace_data{
+	required sds_object      object                       =1;
+	required int32           mpi_size                     =2;
+	required int32           mpi_rank                     =3;
+	required int32           ndim                         =4;
+	required int32           pattern_type                 =5;
+	required uint64          time                         =6;
+	repeated hdf5_hyperslab  h_pattern                    =7;
+	optional hdf5_eselection e_pattern                    =8;
+}
+
+message client_request
+{
+	required message_type        type                     = 1;
+	optional request_query_data   query_data              = 2;
+	optional request_reorg_data   reorg_data              = 3;
+	optional request_admin_data   admin_data              = 4;
+	optional request_analy_data   analy_data              = 5;
+	optional request_trace_data   trace_data              = 6; 
+}
+
+
+message response_query_data{
+	repeated int32         index_type                        = 1;
+	repeated sds_object    index_objects                     = 2;
+	repeated int32         reorg_type                        = 3;
+	repeated sds_object    reorg_objects                     = 4;
+	repeated string        index_parameters                  = 5; //for other parameters, e.g. mpi_len of FastQuery ...
+	repeated string        reorg_parameters                  = 6; //for other parameters, e.g. sorting table
+}
+
+
+//repeated sds_object     result_object                     = 2;
+message response_analy_data{
+	required reorg_status   status                            = 1;
+	optional string         result_data                       = 2; //Short result (not used new)
+	repeated sds_object     result_objects                    = 3; //When this query is ran before
+                                                                       //Return the results as results objects 
+                                                                       //These objects are belonging to a collection
+}
+
+message response_reorg_data{
+	repeated reorg_status   status          = 1;
+}
+
+message response_admin_data{
+	optional int32          status          = 1;
+}
+
+message sds_file1{
+        required string filename            =1;
+        required string group               =2;
+        required string dsetname            =3;
+        required int32  filetype            =4;
+        required int32  datatype            =5;
+        required int32  ir_type             =6; //Sub type for index and reorganized files
+        optional int32  cores               =7;
+        optional string parameters          =8;
+        optional int32  create_time         =9;
+        optional int32  io_pattern_type     =10;
+}
+
+
+message response_trace_data{
+        required sds_file1                   opt_file            = 1;
+        repeated hdf5_hyperslab             opt_hyperslab       = 2;
+        optional hdf5_eselection            opt_element         = 3;
+
+        optional int32                      linear_order        = 4;
+        repeated int32                      chunk_size          = 5;
+}
+
+message client_response
+{
+	required message_type                type                           = 1;
+	required query_status                error_code                     = 2;
+	optional response_query_data         query_data                     = 3;
+	optional response_reorg_data         reorg_data                     = 4;	 
+	optional response_admin_data         admin_data                     = 5;
+	optional response_analy_data         analy_data                     = 6;
+	optional response_trace_data         trace_data                     = 7;
+}
+
+
+
