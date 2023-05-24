@@ -1,4 +1,4 @@
-This directory contains the current version of SDS (Scientific Data Services) framework.
+SDS (Scientific Data Services) framework.
 
 Please report any problem you've encountered in using this package to Bin Dong at dbin@lbl.gov
 
