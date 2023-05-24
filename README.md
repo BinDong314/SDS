@@ -10,7 +10,7 @@ For the License, see below and Licence.txt file
 ![alt text](sds-client.png)
 
 
-*** SDS Publications ***
+***SDS Publications***
 -----------------
 
 1, Bin Dong, Suren Byna, and John Wu, 
@@ -36,7 +36,7 @@ For the License, see below and Licence.txt file
 
 
 
-*** License Agreement ***
+***License Agreement***
 "SDS - Scientific Data Services framework, Copyright (c) 2015, The Regents of the University of California, through Lawrence Berkeley National Laboratory (subject to receipt of any required approvals from the U.S. Dept. of Energy).  All rights reserved."
  
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
